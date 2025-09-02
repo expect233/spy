@@ -1,21 +1,19 @@
-"use client";
-
+'use client';
 import { createContext, useContext, useEffect, useState } from 'react';
 
-type PlayerCtx = { name: string; setName: (v: string) => void };
-const Ctx = createContext<PlayerCtx>({ name: '', setName: () => {} });
+type PlayerCtx = { name: string; setName: (v:string)=>void };
+const Ctx = createContext<PlayerCtx>({ name:'', setName: () => {} });
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
-  const [name, setNameState] = useState('');
+  const [name, _setName] = useState('');
   useEffect(() => {
     const v = typeof window !== 'undefined' ? localStorage.getItem('player:name') || '' : '';
-    if (v) setNameState(v);
+    if (v) _setName(v);
   }, []);
   const setName = (v: string) => {
-    setNameState(v);
+    _setName(v);
     if (typeof window !== 'undefined') localStorage.setItem('player:name', v);
   };
   return <Ctx.Provider value={{ name, setName }}>{children}</Ctx.Provider>;
 }
-
 export const usePlayer = () => useContext(Ctx);
