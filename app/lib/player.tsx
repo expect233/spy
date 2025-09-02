@@ -1,19 +1,32 @@
+// app/lib/player.tsx
 'use client';
 import { createContext, useContext, useEffect, useState } from 'react';
 
-type PlayerCtx = { name: string; setName: (v:string)=>void };
-const Ctx = createContext<PlayerCtx>({ name:'', setName: () => {} });
+type PlayerCtx = { name: string; setName: (v: string) => void };
+const PlayerContext = createContext<PlayerCtx>({ name: '', setName: () => {} });
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
-  const [name, _setName] = useState('');
+  const [name, setNameState] = useState('');
+
   useEffect(() => {
-    const v = typeof window !== 'undefined' ? localStorage.getItem('player:name') || '' : '';
-    if (v) _setName(v);
+    try {
+      const v = localStorage.getItem('player:name');
+      if (v) setNameState(v);
+    } catch {}
   }, []);
+
   const setName = (v: string) => {
-    _setName(v);
-    if (typeof window !== 'undefined') localStorage.setItem('player:name', v);
+    setNameState(v);
+    try {
+      localStorage.setItem('player:name', v);
+    } catch {}
   };
-  return <Ctx.Provider value={{ name, setName }}>{children}</Ctx.Provider>;
+
+  return (
+    <PlayerContext.Provider value={{ name, setName }}>
+      {children}
+    </PlayerContext.Provider>
+  );
 }
-export const usePlayer = () => useContext(Ctx);
+
+export const usePlayer = () => useContext(PlayerContext);
