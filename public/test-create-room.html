@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>測試創建房間功能</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button {
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            background: #fff;
+            border-radius: 4px;
+        }
+        .error {
+            color: red;
+            background: #ffe6e6;
+            border-color: #ff9999;
+        }
+        .success {
+            color: green;
+            background: #e6ffe6;
+            border-color: #99ff99;
+        }
+        .info {
+            color: blue;
+            background: #e6f3ff;
+            border-color: #99ccff;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f0f0f0;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 創建房間功能測試</h1>
+    
+    <div class="test-section">
+        <h2>1. API 連接測試</h2>
+        <button onclick="testApiConnection()">測試 API 連接</button>
+        <div id="api-result" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. 創建房間測試</h2>
+        <div class="form-group">
+            <label for="playerName">玩家名稱:</label>
+            <input type="text" id="playerName" placeholder="輸入玩家名稱" value="測試玩家">
+        </div>
+        <button onclick="testCreateRoom()">測試創建房間</button>
+        <div id="create-result" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. 完整流程測試</h2>
+        <button onclick="testFullFlow()">測試完整流程（創建→跳轉）</button>
+        <div id="flow-result" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. 診斷資訊</h2>
+        <button onclick="showDiagnostics()">顯示診斷資訊</button>
+        <div id="diagnostics" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        let lastRoomCode = '';
+        let lastHostToken = '';
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.textContent = message;
+            element.className = `result ${type}`;
+        }
+
+        async function testApiConnection() {
+            showResult('api-result', '正在測試 API 連接...', 'info');
+            
+            try {
+                const response = await fetch('/api/rooms/TEST');
+                const data = await response.json();
+                
+                if (data.error === 'Room not found') {
+                    showResult('api-result', '✅ API 連接正常！服務器正在運行', 'success');
+                } else {
+                    showResult('api-result', `⚠️ API 回應異常: ${JSON.stringify(data)}`, 'error');
+                }
+            } catch (error) {
+                showResult('api-result', `❌ API 連接失敗: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCreateRoom() {
+            const playerName = document.getElementById('playerName').value;
+            
+            if (!playerName.trim()) {
+                showResult('create-result', '❌ 請輸入玩家名稱', 'error');
+                return;
+            }
+
+            showResult('create-result', '正在創建房間...', 'info');
+            
+            try {
+                const response = await fetch('/api/rooms', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        hostName: playerName.trim()
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    lastRoomCode = data.code;
+                    lastHostToken = data.hostToken;
+                    
+                    showResult('create-result', 
+                        `✅ 房間創建成功！\n` +
+                        `房間代碼: ${data.code}\n` +
+                        `Host Token: ${data.hostToken.substring(0, 8)}...\n` +
+                        `時間: ${new Date().toLocaleTimeString()}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('create-result', `❌ 創建失敗: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('create-result', `❌ 網路錯誤: ${error.message}`, 'error');
+            }
+        }
+
+        async function testFullFlow() {
+            const playerName = document.getElementById('playerName').value;
+            
+            if (!playerName.trim()) {
+                showResult('flow-result', '❌ 請輸入玩家名稱', 'error');
+                return;
+            }
+
+            showResult('flow-result', '開始完整流程測試...', 'info');
+            
+            try {
+                // 步驟 1: 創建房間
+                showResult('flow-result', '步驟 1: 創建房間...', 'info');
+                const createResponse = await fetch('/api/rooms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hostName: playerName.trim() })
+                });
+
+                if (!createResponse.ok) {
+                    const error = await createResponse.json();
+                    throw new Error(`創建房間失敗: ${error.error}`);
+                }
+
+                const { code, hostToken } = await createResponse.json();
+                
+                // 步驟 2: 模擬創建玩家會話
+                showResult('flow-result', `步驟 2: 創建玩家會話...\n房間代碼: ${code}`, 'info');
+                
+                const session = {
+                    playerId: 'host_' + Date.now(),
+                    token: hostToken,
+                    name: playerName.trim(),
+                    avatar: { type: 'emoji', value: '😀', background: '#3B82F6' },
+                    roomCode: code,
+                    isHost: true,
+                    createdAt: Date.now()
+                };
+                
+                localStorage.setItem('playerSession', JSON.stringify(session));
+                
+                // 步驟 3: 驗證房間存在
+                showResult('flow-result', '步驟 3: 驗證房間存在...', 'info');
+                const roomResponse = await fetch(`/api/rooms/${code}`);
+                
+                if (!roomResponse.ok) {
+                    throw new Error('房間驗證失敗');
+                }
+                
+                const roomData = await roomResponse.json();
+                
+                // 步驟 4: 模擬頁面跳轉
+                showResult('flow-result', 
+                    `✅ 完整流程測試成功！\n` +
+                    `房間代碼: ${code}\n` +
+                    `玩家數量: ${roomData.players.length}\n` +
+                    `房間狀態: ${roomData.state}\n` +
+                    `會話已保存到 localStorage\n` +
+                    `準備跳轉到: /room/${code}`, 
+                    'success'
+                );
+                
+                // 實際跳轉（5秒後）
+                setTimeout(() => {
+                    if (confirm(`是否跳轉到房間頁面？\n房間代碼: ${code}`)) {
+                        window.location.href = `/room/${code}`;
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                showResult('flow-result', `❌ 流程測試失敗: ${error.message}`, 'error');
+            }
+        }
+
+        function showDiagnostics() {
+            const diagnostics = {
+                userAgent: navigator.userAgent,
+                currentUrl: window.location.href,
+                localStorage: !!window.localStorage,
+                sessionStorage: !!window.sessionStorage,
+                fetch: !!window.fetch,
+                savedSession: localStorage.getItem('playerSession'),
+                timestamp: new Date().toISOString()
+            };
+            
+            showResult('diagnostics', 
+                `🔍 診斷資訊:\n` +
+                `瀏覽器: ${diagnostics.userAgent.split(' ').pop()}\n` +
+                `當前 URL: ${diagnostics.currentUrl}\n` +
+                `localStorage 支援: ${diagnostics.localStorage ? '✅' : '❌'}\n` +
+                `fetch API 支援: ${diagnostics.fetch ? '✅' : '❌'}\n` +
+                `已保存會話: ${diagnostics.savedSession ? '✅ 有' : '❌ 無'}\n` +
+                `時間: ${diagnostics.timestamp}`, 
+                'info'
+            );
+        }
+
+        // 頁面載入時自動測試 API 連接
+        window.onload = function() {
+            testApiConnection();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,293 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>誰是臥底 (MVP)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans TC, Arial, sans-serif; margin: 0; background: #0b0e12; color: #e6edf3; }
+    header { padding: 12px 16px; background: #10151b; border-bottom: 1px solid #1f2937; display: flex; align-items: center; justify-content: space-between; }
+    main { display: grid; grid-template-columns: 320px 1fr; gap: 16px; padding: 16px; }
+    .card { background: #121820; border: 1px solid #1f2937; border-radius: 10px; padding: 12px; }
+    .row { display:flex; align-items:center; gap:8px; flex-wrap: wrap; }
+    .btn { background:#1f6feb; border:none; color:white; padding:8px 12px; border-radius:8px; cursor:pointer; }
+    .btn[disabled] { opacity: .5; cursor: not-allowed; }
+    input, select, textarea { background:#0b0e12; color:#e6edf3; border:1px solid #1f2937; border-radius:8px; padding:8px; }
+    ul { list-style: none; padding-left: 0; }
+    .pill { padding:2px 8px; border-radius:999px; border:1px solid #1f2937; }
+    .alive { color:#10b981; }
+    .dead { color:#ef4444; }
+    .muted { color:#94a3b8; }
+    .log { height: 160px; overflow-y: auto; background:#0c1117; border:1px solid #1f2937; padding:8px; border-radius:8px; }
+    .word { font-size: 22px; font-weight: 700; }
+  </style>
+  <!-- Colyseus client via CDN -->
+  <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
+</head>
+<body>
+  <header>
+    <div class="row">
+      <strong>誰是臥底 · MVP</strong>
+      <span id="phase" class="pill muted"></span>
+      <span id="round" class="pill"></span>
+      <span id="topic" class="pill"></span>
+    </div>
+    <div class="row">
+      <input id="nameInput" placeholder="你的名字" maxlength="20"/>
+      <button id="setNameBtn" class="btn">更新名稱</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card" id="left">
+      <div class="row" style="justify-content: space-between;">
+        <strong>玩家</strong>
+        <span id="youAreHost" class="pill muted" style="display:none;">房主</span>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button id="joinBtn" class="btn">加入房間</button>
+        <button id="readyBtn" class="btn">準備/取消</button>
+      </div>
+
+      <div id="hostControls" style="margin-top:12px; display:none;">
+        <div class="row">
+          <label>臥底人數：</label>
+          <input type="range" id="spyCount" min="1" max="4" value="1"/>
+          <span id="spyCountLabel">1</span>
+        </div>
+        <button id="startBtn" class="btn">開始遊戲</button>
+      </div>
+
+      <h4 style="margin-top:16px;">玩家列表</h4>
+      <ul id="players"></ul>
+
+      <div class="card" style="margin-top:12px;">
+        <h4>你的詞</h4>
+        <div id="yourWord" class="word">（尚未開始）</div>
+        <div id="yourRole" class="muted"></div>
+      </div>
+
+      <h4 style="margin-top:16px;">訊息</h4>
+      <div id="log" class="log"></div>
+    </section>
+
+    <section class="card" id="right">
+      <div id="cluePanel">
+        <h3>出一句話形容你的詞（輪到每位玩家一次）</h3>
+        <div class="row">
+          <input id="clueInput" placeholder="一句提示（1~100字）" maxlength="100" style="flex:1;"/>
+          <button id="sendClueBtn" class="btn">送出提示</button>
+        </div>
+        <ul id="clueList"></ul>
+      </div>
+
+      <div id="votePanel" style="display:none;">
+        <h3>投票淘汰一位玩家</h3>
+        <div class="row">
+          <select id="voteSelect"></select>
+          <button id="voteBtn" class="btn">投票</button>
+        </div>
+        <div id="lastEliminated" class="muted" style="margin-top:8px;"></div>
+      </div>
+
+      <div id="endPanel" style="display:none;">
+        <h2 id="winner"></h2>
+        <div class="muted">重新整理頁面可重新加入</div>
+      </div>
+    </section>
+  </main>
+
+<script>
+  const logEl = document.getElementById('log');
+  function log(msg) {
+    const div = document.createElement('div');
+    div.textContent = msg;
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  let client = null;
+  let room = null;
+  let myId = null;
+  let isHost = false;
+  let currentPhase = 'lobby';
+
+  const nameInput = document.getElementById('nameInput');
+  const setNameBtn = document.getElementById('setNameBtn');
+  const joinBtn = document.getElementById('joinBtn');
+  const readyBtn = document.getElementById('readyBtn');
+  const startBtn = document.getElementById('startBtn');
+  const playersEl = document.getElementById('players');
+  const spyCountInput = document.getElementById('spyCount');
+  const spyCountLabel = document.getElementById('spyCountLabel');
+  const hostControls = document.getElementById('hostControls');
+  const youAreHost = document.getElementById('youAreHost');
+
+  const yourWordEl = document.getElementById('yourWord');
+  const yourRoleEl = document.getElementById('yourRole');
+
+  const cluePanel = document.getElementById('cluePanel');
+  const clueInput = document.getElementById('clueInput');
+  const sendClueBtn = document.getElementById('sendClueBtn');
+  const clueList = document.getElementById('clueList');
+
+  const votePanel = document.getElementById('votePanel');
+  const voteSelect = document.getElementById('voteSelect');
+  const voteBtn = document.getElementById('voteBtn');
+  const lastEliminated = document.getElementById('lastEliminated');
+
+  const endPanel = document.getElementById('endPanel');
+  const winnerEl = document.getElementById('winner');
+
+  const phaseEl = document.getElementById('phase');
+  const roundEl = document.getElementById('round');
+  const topicEl = document.getElementById('topic');
+
+  spyCountInput.addEventListener('input', () => {
+    spyCountLabel.textContent = spyCountInput.value;
+    if (room && isHost) {
+      room.send('setSpyCount', { count: Number(spyCountInput.value) });
+    }
+  });
+
+  setNameBtn.addEventListener('click', () => {
+    if (room) room.send('setName', { name: nameInput.value || '' });
+  });
+
+  joinBtn.addEventListener('click', async () => {
+    try {
+      client = new Colyseus.Client(location.origin.replace(/^http/, 'ws'));
+      room = await client.joinOrCreate('undercover');
+      bindRoom(room);
+      log('已加入房間');
+    } catch (e) {
+      console.error(e);
+      log('加入失敗：' + e.message);
+    }
+  });
+
+  readyBtn.addEventListener('click', () => {
+    if (room) room.send('toggleReady');
+  });
+
+  startBtn.addEventListener('click', () => {
+    if (room && isHost) room.send('startGame');
+  });
+
+  sendClueBtn.addEventListener('click', () => {
+    if (!room) return;
+    const clue = (clueInput.value || '').trim();
+    if (clue.length === 0) return;
+    room.send('submitClue', { clue });
+    clueInput.value = '';
+  });
+
+  voteBtn.addEventListener('click', () => {
+    if (!room) return;
+    const targetId = voteSelect.value;
+    if (!targetId) return;
+    room.send('submitVote', { targetId });
+  });
+
+  function updatePlayersList(state) {
+    playersEl.innerHTML = '';
+    const entries = Array.from(state.players.values());
+    for (const p of entries) {
+      const li = document.createElement('li');
+      const status = p.alive ? 'alive' : 'dead';
+      const spoke = p.hasSpoken ? '🗣️' : '…';
+      li.innerHTML = `<span class="${status}">${p.name}</span> ${p.isHost ? '👑' : ''} ${p.ready ? '✅' : '⏳'} ${p.alive ? '' : '☠️'} ${spoke}`;
+      playersEl.appendChild(li);
+    }
+
+    // update vote options
+    voteSelect.innerHTML = '';
+    for (const p of entries) {
+      if (p.alive) {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        voteSelect.appendChild(opt);
+      }
+    }
+  }
+
+  function setPhase(phase, extra={}) {
+    currentPhase = phase;
+    phaseEl.textContent = '階段: ' + phase;
+    if ('round' in extra) {
+      roundEl.textContent = extra.round ? ('第 ' + extra.round + ' 回合') : '';
+    }
+    if ('winner' in extra && extra.winner) {
+      winnerEl.textContent = extra.winner === 'spies' ? '臥底勝利！' : '平民勝利！';
+    }
+    if ('topicHint' in extra) {
+      topicEl.textContent = extra.topicHint ? ('提示: ' + extra.topicHint) : '';
+    }
+
+    cluePanel.style.display = (phase === 'clue') ? '' : 'none';
+    votePanel.style.display = (phase === 'vote') ? '' : 'none';
+    endPanel.style.display = (phase === 'end') ? '' : 'none';
+
+    if (phase === 'clue') {
+      clueList.innerHTML = '';
+    }
+  }
+
+  function bindRoom(room) {
+    room.onStateChange((state) => {
+      updatePlayersList(state);
+      setPhase(state.phase, { round: state.round, topicHint: state.topicHint });
+      lastEliminated.textContent = state.lastEliminatedName ? ('上一輪淘汰：' + state.lastEliminatedName) : '';
+    });
+
+    room.onMessage('joined', (msg) => {
+      myId = msg.id;
+      isHost = !!msg.isHost;
+      youAreHost.style.display = isHost ? '' : 'none';
+      hostControls.style.display = isHost ? '' : 'none';
+      log(isHost ? '你是房主' : '你是玩家');
+    });
+
+    room.onMessage('host', (msg) => {
+      if (msg.youAreHost) {
+        isHost = true;
+        youAreHost.style.display = '';
+        hostControls.style.display = '';
+        log('你被指派為新的房主');
+      }
+    });
+
+    room.onMessage('system', (msg) => log(msg.text));
+    room.onMessage('error', (msg) => log('⚠️ ' + msg.message));
+
+    room.onMessage('secret', (msg) => {
+      yourWordEl.textContent = msg.word;
+      yourRoleEl.textContent = '你的身份：' + (msg.role === 'spy' ? '臥底' : '平民');
+      if (msg.topicHint) {
+        topicEl.textContent = '提示: ' + msg.topicHint;
+      }
+    });
+
+    room.onMessage('phase', (msg) => {
+      setPhase(msg.phase, msg);
+    });
+
+    room.onMessage('clue', (msg) => {
+      const li = document.createElement('li');
+      li.textContent = `${msg.name}：${msg.clue}`;
+      clueList.appendChild(li);
+    });
+
+    room.onMessage('eliminated', (msg) => {
+      log(`淘汰：${msg.name}`);
+    });
+
+    room.onMessage('chat', (msg) => {
+      log(`${msg.name}：${msg.text}`);
+    });
+  }
+</script>
+</body>
+</html>
