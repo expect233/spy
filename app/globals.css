@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f8fafc; /* slate-50 */
-  --fg: #0f172a; /* slate-900 */
+  --bg: #f8fafc;   /* slate-50 */
+  --fg: #0f172a;   /* slate-900 */
   --muted: #475569; /* slate-600 */
   --card: #ffffff;
   --ring: #2563eb; /* blue-600 */
 }
-
+html, body { color: var(--fg); background: var(--bg); }
+p, li { line-height: 1.7; }
 @theme inline {
   --color-background: var(--bg);
   --color-foreground: var(--fg);
