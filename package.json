@@ -1,4 +1,5 @@
 {
+  "engines": { "node": "20.x" },
   "name": "undercover-game",
   "version": "v1.0.0",
   "private": true,
