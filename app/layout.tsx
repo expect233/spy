@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import ClientBootstrap from "@/components/ClientBootstrap";
 import { PlayerProvider } from '@/app/lib/player';
+import VersionBadge from './components/VersionBadge';
 
 export const metadata: Metadata = {
   title: "誰是臥底 - Undercover Game",
