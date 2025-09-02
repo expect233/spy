@@ -1,0 +1,64 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 房間規則
+    match /rooms/{roomCode} {
+      // 任何人都可以讀取房間信息
+      allow read: if true;
+      
+      // 只有通過 Cloud Functions 才能創建房間
+      allow create: if false;
+      
+      // 只有房主或通過 Cloud Functions 才能更新房間
+      allow update: if false;
+      
+      // 不允許刪除房間
+      allow delete: if false;
+      
+      // 玩家子集合
+      match /players/{playerId} {
+        allow read: if true;
+        allow write: if false; // 只能通過 Cloud Functions 操作
+      }
+      
+      // 回合子集合
+      match /rounds/{roundIndex} {
+        allow read: if true;
+        allow write: if false; // 只能通過 Cloud Functions 操作
+        
+        // 發言子集合
+        match /speaks/{playerId} {
+          allow read: if true;
+          allow write: if false; // 只能通過 Cloud Functions 操作
+        }
+        
+        // 投票子集合
+        match /votes/{voterId} {
+          allow read: if true;
+          allow write: if false; // 只能通過 Cloud Functions 操作
+        }
+      }
+      
+      // 聊天訊息子集合（Firebase Web 直接寫入）
+      match /messages/{messageId} {
+        allow read: if true;
+        allow create: if request.auth != null
+                       && request.resource.data.roomCode == roomCode
+                       && request.resource.data.text is string
+                       && request.resource.data.text.size() >= 1
+                       && request.resource.data.text.size() <= 200
+                       && request.resource.data.uid == request.auth.uid
+                       && request.resource.data.at == request.time; // 使用 serverTimestamp()
+        allow update, delete: if false;
+      }
+    }
+    
+    // 玩家 tokens（用於身份驗證）
+    match /tokens/{tokenId} {
+      allow read, write: if false; // 只能通過 Cloud Functions 操作
+    }
+    
+    // 其他驗證函式可視需求補充
+  }
+}

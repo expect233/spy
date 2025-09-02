@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Frontend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input, button {
+            padding: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: #f9f9f9;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>Debug Frontend - 創建房間測試</h1>
+    
+    <div class="form-group">
+        <label for="playerName">玩家名稱:</label>
+        <input type="text" id="playerName" placeholder="輸入玩家名稱" value="TestPlayer">
+    </div>
+    
+    <div class="form-group">
+        <button onclick="testCreateRoom()">測試創建房間</button>
+    </div>
+    
+    <div class="form-group">
+        <button onclick="testJoinRoom()">測試加入房間</button>
+    </div>
+    
+    <div id="result" class="result" style="display: none;"></div>
+
+    <script>
+        let lastRoomCode = '';
+
+        async function testCreateRoom() {
+            const playerName = document.getElementById('playerName').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!playerName.trim()) {
+                showResult('請輸入玩家名稱', 'error');
+                return;
+            }
+
+            try {
+                showResult('正在創建房間...', '');
+                
+                const response = await fetch('/api/rooms', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        hostName: playerName.trim()
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    lastRoomCode = data.code;
+                    showResult(`✅ 房間創建成功！\n房間代碼: ${data.code}\nHost Token: ${data.hostToken.substring(0, 8)}...`, 'success');
+                } else {
+                    showResult(`❌ 創建失敗: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ 網路錯誤: ${error.message}`, 'error');
+            }
+        }
+
+        async function testJoinRoom() {
+            const playerName = document.getElementById('playerName').value;
+            
+            if (!lastRoomCode) {
+                showResult('請先創建房間', 'error');
+                return;
+            }
+
+            if (!playerName.trim()) {
+                showResult('請輸入玩家名稱', 'error');
+                return;
+            }
+
+            try {
+                showResult('正在加入房間...', '');
+                
+                const response = await fetch(`/api/rooms/${lastRoomCode}/join`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: playerName.trim() + '2'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`✅ 加入房間成功！\n玩家ID: ${data.playerId}\nToken: ${data.token.substring(0, 8)}...`, 'success');
+                    
+                    // 測試獲取房間信息
+                    setTimeout(testGetRoom, 1000);
+                } else {
+                    showResult(`❌ 加入失敗: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ 網路錯誤: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetRoom() {
+            if (!lastRoomCode) return;
+
+            try {
+                const response = await fetch(`/api/rooms/${lastRoomCode}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const currentResult = document.getElementById('result').textContent;
+                    showResult(`${currentResult}\n\n📊 房間信息:\n玩家數量: ${data.players.length}\n房間狀態: ${data.state}`, 'success');
+                } else {
+                    showResult(`❌ 獲取房間失敗: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ 獲取房間錯誤: ${error.message}`, 'error');
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = message;
+            resultDiv.className = `result ${type}`;
+        }
+
+        // 頁面載入時測試 API 連接
+        window.onload = function() {
+            fetch('/api/rooms/TEST')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error === 'Room not found') {
+                        showResult('✅ API 連接正常', 'success');
+                    }
+                })
+                .catch(error => {
+                    showResult(`❌ API 連接失敗: ${error.message}`, 'error');
+                });
+        };
+    </script>
+</body>
+</html>
