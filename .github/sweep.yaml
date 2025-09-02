@@ -1,0 +1,4 @@
+# .github/sweep.yaml
+label: sweep          # 告訴 Sweep 使用這個標籤觸發
+branch: sweep-bot     # Sweep 建 PR 的預設分支名稱
+sandbox_mode: false   # 允許它真的開 PR（不是沙盒乾跑）
