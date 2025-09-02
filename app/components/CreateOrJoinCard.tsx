@@ -1,7 +1,8 @@
+// app/components/CreateOrJoinCard.tsx
 'use client';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { usePlayer } from '@/app/lib/player';
+import { usePlayer } from '../lib/player'; // 相對於 app/components
 
 export default function CreateOrJoinCard() {
   const router = useRouter();
@@ -10,9 +11,13 @@ export default function CreateOrJoinCard() {
 
   async function createRoom() {
     const r = await fetch('/api/rooms', { method: 'POST' });
-    const j = await r.json();
-    if (!r.ok || !j?.data?.code) { alert(j?.error || '建立房間失敗'); return; }
-    router.push(`/room/${j.data.code}`);
+    let data: any = null;
+    try { data = await r.json(); } catch {}
+    if (!r.ok || !data?.data?.code) {
+      alert(data?.error || '建立房間失敗');
+      return;
+    }
+    router.push(`/room/${data.data.code}`);
   }
 
   function joinRoom() {
@@ -28,7 +33,7 @@ export default function CreateOrJoinCard() {
           className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="輸入你的名字"
           value={name}
-          onChange={e=>setName(e.target.value)}
+          onChange={(e) => setName(e.target.value)}
         />
       </div>
 
@@ -47,7 +52,7 @@ export default function CreateOrJoinCard() {
           className="flex-1 rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="輸入房號"
           value={joinCode}
-          onChange={e=>setJoinCode(e.target.value.toUpperCase())}
+          onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
         />
         <button
           onClick={joinRoom}
