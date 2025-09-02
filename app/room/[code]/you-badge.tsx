@@ -1,5 +1,6 @@
+// app/room/[code]/you-badge.tsx
 'use client';
-import { usePlayer } from '@/app/lib/player';
+import { usePlayer } from '../../lib/player';
 
 export default function YouBadge() {
   const { name } = usePlayer();
