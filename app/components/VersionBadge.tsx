@@ -1,15 +1,17 @@
+// app/components/VersionBadge.tsx
 'use client';
 import { useEffect, useRef, useState } from 'react';
-type Info = { version:string; commit?:string; builtAt?:number };
+
+type Info = { version: string; commit?: string; builtAt?: number };
 
 export default function VersionBadge() {
-  const [initial, setInitial] = useState<Info|null>(null);
+  const [initial, setInitial] = useState<Info | null>(null);
   const latestRef = useRef<string>();
 
   useEffect(() => {
     let alive = true;
     const load = async () => {
-      const r = await fetch('/build.json?x='+Date.now(), { cache:'no-store' });
+      const r = await fetch('/build.json?x=' + Date.now(), { cache: 'no-store' });
       if (!r.ok) return;
       const j: Info = await r.json();
       if (alive) {
@@ -18,8 +20,11 @@ export default function VersionBadge() {
       }
     };
     load();
-    const t = setInterval(load, 180000); // 每3分鐘檢查
-    return () => { alive = false; clearInterval(t); };
+    const t = setInterval(load, 180000); // 每 3 分鐘檢查一次
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
   }, [initial]);
 
   if (!initial) return null;
@@ -28,7 +33,8 @@ export default function VersionBadge() {
   return (
     <div className="fixed right-3 top-3 z-50 flex flex-col items-end gap-2">
       <span className="rounded-full bg-blue-600 text-white text-xs px-3 py-1 shadow">
-        {initial.version}{initial.commit ? ` · ${initial.commit}` : ''}
+        {initial.version}
+        {initial.commit ? ` · ${initial.commit}` : ''}
       </span>
       {isNewer && (
         <button
