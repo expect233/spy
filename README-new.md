@@ -47,7 +47,7 @@
 ### 環境要求
 
 - Node.js >= 20
-- npm 或 yarn
+ main
 - Firebase CLI
 
 ### 本地開發
