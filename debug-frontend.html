@@ -116,7 +116,7 @@
             }
 
             try {
-                showResult('正在加入房間...', '');
+                showResult('正在加入房間...', 'info');
                 
                 const response = await fetch(`/api/rooms/${lastRoomCode}/join`, {
                     method: 'POST',

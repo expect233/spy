@@ -27,23 +27,38 @@ class InvalidGameStateError extends Error {
 export function assignRoles(
   players: Player[],
   undercoverCount: number,
-  blankCount: number = 0,
-  topic?: Topic
+  arg3?: number | string,
+  arg4?: string | Topic
 ): Assignment[] {
   if (players.length < 3) {
     throw new Error('至少需要 3 名玩家');
   }
 
-  const totalSpecialRoles = undercoverCount + blankCount;
-  if (totalSpecialRoles >= players.length) {
-    throw new Error('特殊角色數量不能大於等於玩家總數');
+  if (undercoverCount <= 0) {
+    throw new Error('至少需要 1 名臥底');
   }
 
-  // 隨機打亂玩家順序
+  let blankCount = 0;
+  let topic: Topic | undefined;
+
+  if (typeof arg3 === 'number') {
+    blankCount = arg3;
+    if (typeof arg4 === 'object' && arg4) {
+      topic = arg4 as Topic;
+    }
+  } else {
+    const civilianWord = typeof arg3 === 'string' ? arg3 : '';
+    const undercoverWord = typeof arg4 === 'string' ? arg4 : '';
+    topic = { civilian: civilianWord, undercover: undercoverWord, blank: '' };
+  }
+
+  if (undercoverCount + blankCount >= players.length) {
+    throw new Error('臥底數量不能大於等於玩家總數');
+  }
+
   const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
   const assignments: Assignment[] = [];
 
-  // 分配臥底
   for (let i = 0; i < undercoverCount; i++) {
     assignments.push({
       playerId: shuffledPlayers[i].id,
@@ -52,7 +67,6 @@ export function assignRoles(
     });
   }
 
-  // 分配白板
   for (let i = undercoverCount; i < undercoverCount + blankCount; i++) {
     assignments.push({
       playerId: shuffledPlayers[i].id,
@@ -61,7 +75,6 @@ export function assignRoles(
     });
   }
 
-  // 其餘為平民
   for (let i = undercoverCount + blankCount; i < shuffledPlayers.length; i++) {
     assignments.push({
       playerId: shuffledPlayers[i].id,
@@ -74,9 +87,18 @@ export function assignRoles(
 }
 
 /**
- * 統計投票結果
+ * 檢查遊戲是否可以開始
  */
-export function tallyVotes(votes: Vote[]): {
+export function checkStartable(
+  players: Player[],
+  undercoverCount: number
+): boolean {
+  if (players.length < 3) return false;
+  if (undercoverCount < 1 || undercoverCount >= players.length) return false;
+  return players.every((p) => p.isReady);
+}
+
+function calculateVoteStats(votes: Vote[]): {
   tally: Record<string, number>;
   topCandidates: string[];
   totalVotes: number;
@@ -84,7 +106,6 @@ export function tallyVotes(votes: Vote[]): {
   const tally: Record<string, number> = {};
   let totalVotes = 0;
 
-  // 統計每個候選人的票數
   votes.forEach((vote) => {
     if (vote.targetId) {
       tally[vote.targetId] = (tally[vote.targetId] || 0) + 1;
@@ -92,15 +113,23 @@ export function tallyVotes(votes: Vote[]): {
     }
   });
 
-  // 找出最高票數
   const maxVotes = Math.max(...Object.values(tally), 0);
-
-  // 找出所有最高票的候選人
   const topCandidates = Object.keys(tally).filter(
     (playerId) => tally[playerId] === maxVotes
   );
 
   return { tally, topCandidates, totalVotes };
+}
+
+/**
+ * 統計投票結果（簡化版）
+ */
+export function tallyVotes(votes: Vote[]): {
+  countMap: Record<string, number>;
+  topIds: string[];
+} {
+  const { tally, topCandidates } = calculateVoteStats(votes);
+  return { countMap: tally, topIds: topCandidates };
 }
 
 /**
@@ -400,7 +429,7 @@ export function processVoteResult(room: Room, hostPick?: string): {
   }
 
   // 統計投票
-  const { tally, topCandidates } = tallyVotes(currentRound.votes);
+  const { tally, topCandidates } = calculateVoteStats(currentRound.votes);
 
   // 解決淘汰
   const { eliminatedId, isTie } = resolveElimination({

@@ -145,7 +145,7 @@ class OpenAITopicProvider implements ITopicProvider {
               content: this.createUserPrompt(lang),
             }
           ],
-          max_tokens: 150,
+          max_tokens: 100,
           temperature: 0.8,
         }),
       });
