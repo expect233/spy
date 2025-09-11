@@ -240,7 +240,6 @@ export class StoreFactory {
     if (useRedis) {
       try {
         // 使用 require 進行同步導入
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const Redis = require('ioredis');
         const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
         const redis = new Redis(redisUrl);
