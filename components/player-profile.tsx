@@ -120,7 +120,7 @@ export function PlayerProfile({ className }: PlayerProfileProps) {
   };
 
   const avatarStyles = getAvailableAvatarStyles();
-  const displayUrl = getAvatarDisplayUrl(playerAvatar, playerName);
+  const displayUrl = getAvatarDisplayUrl(playerAvatar ?? undefined, playerName);
 
   if (!playerName || !playerId) {
     return null;

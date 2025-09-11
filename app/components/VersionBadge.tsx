@@ -6,7 +6,7 @@ type Info = { version: string; commit?: string; builtAt?: number };
 
 export default function VersionBadge() {
   const [initial, setInitial] = useState<Info | null>(null);
-  const latestRef = useRef<string>();
+  const latestRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     let alive = true;
