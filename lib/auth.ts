@@ -85,15 +85,15 @@ export function getSavedPlayerName(): string {
 /**
  * 獲取保存的玩家頭像
  */
-export function getSavedPlayerAvatar(): Avatar | null {
+export function getSavedPlayerAvatar(): Avatar | undefined {
   try {
     const avatarData = localStorage.getItem(STORAGE_KEYS.PLAYER_AVATAR);
-    if (!avatarData) return null;
-    
+    if (!avatarData) return undefined;
+
     return JSON.parse(avatarData);
   } catch (error) {
     console.error('Failed to get saved player avatar:', error);
-    return null;
+    return undefined;
   }
 }
 
@@ -129,12 +129,7 @@ export function createPlayerSession(
       savePlayerAvatar(avatar);
     } catch (error) {
       console.warn('創建頭像失敗，使用預設頭像:', error);
-      // 使用簡單的預設頭像
-      avatar = {
-        type: 'emoji',
-        value: '😀',
-        background: '#3B82F6'
-      };
+      avatar = createDefaultAvatar('Player');
     }
   }
   
