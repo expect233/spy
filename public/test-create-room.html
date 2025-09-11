@@ -127,7 +127,7 @@
                 const data = await response.json();
                 
                 if (data.error === 'Room not found') {
-                    showResult('api-result', '✅ API 連接正常！服務器正在運行', 'success');
+                    showResult('api-result', '✅ API 連接正常！伺服器正在運行', 'success');
                 } else {
                     showResult('api-result', `⚠️ API 回應異常: ${JSON.stringify(data)}`, 'error');
                 }
