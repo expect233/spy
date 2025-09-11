@@ -223,7 +223,7 @@ function RoundHistory({ round, roundNumber, players, isCurrentRound }: RoundHist
                     {getPlayerName(speak.playerId)}
                   </span>
                   <span className="text-slate-400 text-xs">
-                    {formatTime(speak.timestamp)}
+                    {formatTime(speak.at)}
                   </span>
                 </div>
                 <p className="text-slate-300 text-sm">{speak.text}</p>
@@ -258,7 +258,7 @@ function RoundHistory({ round, roundNumber, players, isCurrentRound }: RoundHist
                   </div>
                 </div>
                 <div className="text-slate-400 text-xs mt-1">
-                  {formatTime(vote.timestamp)}
+                  {formatTime(vote.at)}
                 </div>
               </div>
             ))}

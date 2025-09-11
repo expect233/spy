@@ -130,11 +130,11 @@ export class InMemoryStore implements IRoomStore {
  * Redis 儲存實作
  */
 export class RedisStore implements IRoomStore {
-  private redis: Record<string, unknown>; // ioredis instance
+  private redis: any; // ioredis instance
   private keyPrefix = 'undercover:room:';
   private defaultTTL = 24 * 60 * 60; // 24 hours in seconds
 
-  constructor(redisInstance: Record<string, unknown>) {
+  constructor(redisInstance: any) {
     this.redis = redisInstance;
   }
 
@@ -240,7 +240,6 @@ export class StoreFactory {
     if (useRedis) {
       try {
         // 使用 require 進行同步導入
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const Redis = require('ioredis');
         const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
         const redis = new Redis(redisUrl);

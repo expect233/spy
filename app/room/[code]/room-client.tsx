@@ -5,6 +5,14 @@ import { useParams, useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
 import { getPlayerSession, getCurrentPlayerId, isHost } from '@/lib/auth';
 import { Room, Player, Assignment } from '@/types/game';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 export default function RoomClient() {
   const params = useParams();

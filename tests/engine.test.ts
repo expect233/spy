@@ -12,12 +12,24 @@ import {
 } from '@/lib/engine';
 import { Player, Vote, Assignment, Speak } from '@/types';
 
+function mockPlayer(id: string, name: string, isHost: boolean, isReady: boolean): Player {
+  return {
+    id,
+    name,
+    isHost,
+    isReady,
+    connected: true,
+    joinedAt: Date.now(),
+    createdAt: Date.now(),
+  };
+}
+
 describe('Engine - assignRoles', () => {
   const mockPlayers: Player[] = [
-    { id: '1', name: 'Player1', isReady: true, isHost: true, connected: true },
-    { id: '2', name: 'Player2', isReady: true, isHost: false, connected: true },
-    { id: '3', name: 'Player3', isReady: true, isHost: false, connected: true },
-    { id: '4', name: 'Player4', isReady: true, isHost: false, connected: true },
+    mockPlayer('1', 'Player1', true, true),
+    mockPlayer('2', 'Player2', false, true),
+    mockPlayer('3', 'Player3', false, true),
+    mockPlayer('4', 'Player4', false, true),
   ];
 
   it('應該正確分配角色', () => {
@@ -74,9 +86,9 @@ describe('Engine - assignRoles', () => {
 describe('Engine - checkStartable', () => {
   it('應該在所有條件滿足時返回 true', () => {
     const players: Player[] = [
-      { id: '1', name: 'Player1', isReady: true, isHost: true, connected: true },
-      { id: '2', name: 'Player2', isReady: true, isHost: false, connected: true },
-      { id: '3', name: 'Player3', isReady: true, isHost: false, connected: true },
+      mockPlayer('1', 'Player1', true, true),
+      mockPlayer('2', 'Player2', false, true),
+      mockPlayer('3', 'Player3', false, true),
     ];
     
     expect(checkStartable(players, 1)).toBe(true);
@@ -84,8 +96,8 @@ describe('Engine - checkStartable', () => {
 
   it('應該在玩家數量不足時返回 false', () => {
     const players: Player[] = [
-      { id: '1', name: 'Player1', isReady: true, isHost: true, connected: true },
-      { id: '2', name: 'Player2', isReady: true, isHost: false, connected: true },
+      mockPlayer('1', 'Player1', true, true),
+      mockPlayer('2', 'Player2', false, true),
     ];
     
     expect(checkStartable(players, 1)).toBe(false);
@@ -93,9 +105,9 @@ describe('Engine - checkStartable', () => {
 
   it('應該在有玩家未準備時返回 false', () => {
     const players: Player[] = [
-      { id: '1', name: 'Player1', isReady: true, isHost: true, connected: true },
-      { id: '2', name: 'Player2', isReady: false, isHost: false, connected: true },
-      { id: '3', name: 'Player3', isReady: true, isHost: false, connected: true },
+      mockPlayer('1', 'Player1', true, true),
+      mockPlayer('2', 'Player2', false, false),
+      mockPlayer('3', 'Player3', false, true),
     ];
     
     expect(checkStartable(players, 1)).toBe(false);
@@ -103,9 +115,9 @@ describe('Engine - checkStartable', () => {
 
   it('應該在臥底數量不合理時返回 false', () => {
     const players: Player[] = [
-      { id: '1', name: 'Player1', isReady: true, isHost: true, connected: true },
-      { id: '2', name: 'Player2', isReady: true, isHost: false, connected: true },
-      { id: '3', name: 'Player3', isReady: true, isHost: false, connected: true },
+      mockPlayer('1', 'Player1', true, true),
+      mockPlayer('2', 'Player2', false, true),
+      mockPlayer('3', 'Player3', false, true),
     ];
     
     expect(checkStartable(players, 0)).toBe(false);
@@ -116,10 +128,10 @@ describe('Engine - checkStartable', () => {
 describe('Engine - tallyVotes', () => {
   it('應該正確統計投票', () => {
     const votes: Vote[] = [
-      { voterId: '1', targetId: 'A' },
-      { voterId: '2', targetId: 'B' },
-      { voterId: '3', targetId: 'A' },
-      { voterId: '4', targetId: 'C' },
+      { voterId: '1', targetId: 'A', round: 1, at: 0 },
+      { voterId: '2', targetId: 'B', round: 1, at: 0 },
+      { voterId: '3', targetId: 'A', round: 1, at: 0 },
+      { voterId: '4', targetId: 'C', round: 1, at: 0 },
     ];
     
     const result = tallyVotes(votes);
@@ -134,10 +146,10 @@ describe('Engine - tallyVotes', () => {
 
   it('應該處理同票情況', () => {
     const votes: Vote[] = [
-      { voterId: '1', targetId: 'A' },
-      { voterId: '2', targetId: 'B' },
-      { voterId: '3', targetId: 'A' },
-      { voterId: '4', targetId: 'B' },
+      { voterId: '1', targetId: 'A', round: 1, at: 0 },
+      { voterId: '2', targetId: 'B', round: 1, at: 0 },
+      { voterId: '3', targetId: 'A', round: 1, at: 0 },
+      { voterId: '4', targetId: 'B', round: 1, at: 0 },
     ];
     
     const result = tallyVotes(votes);
@@ -186,11 +198,11 @@ describe('Engine - Utility Functions', () => {
   ];
 
   const mockVotes: Vote[] = [
-    { voterId: '1', targetId: '2' },
+    { voterId: '1', targetId: '2', round: 1, at: 0 },
   ];
 
   const mockSpeaks: Speak[] = [
-    { playerId: '1', text: 'Test speak' },
+    { playerId: '1', text: 'Test speak', round: 1, at: 0 },
   ];
 
   it('getPlayerAssignment 應該正確獲取玩家角色', () => {
@@ -217,9 +229,9 @@ describe('Engine - Utility Functions', () => {
   });
 
   it('isValidVote 應該正確驗證投票', () => {
-    const validVote: Vote = { voterId: '1', targetId: '2' };
-    const selfVote: Vote = { voterId: '1', targetId: '1' };
-    const invalidPlayerVote: Vote = { voterId: '999', targetId: '2' };
+    const validVote: Vote = { voterId: '1', targetId: '2', round: 1, at: 0 };
+    const selfVote: Vote = { voterId: '1', targetId: '1', round: 1, at: 0 };
+    const invalidPlayerVote: Vote = { voterId: '999', targetId: '2', round: 1, at: 0 };
     
     expect(isValidVote(validVote, ['1', '2'])).toBe(true);
     expect(isValidVote(selfVote, ['1', '2'])).toBe(false);

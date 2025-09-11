@@ -40,7 +40,7 @@ export default function FirestoreChat({ roomCode, className = "" }: FirestoreCha
   const endRef = useRef<HTMLDivElement>(null);
 
   const colRef = useMemo(() => {
-    if (!dbRef) return null as any;
+    if (!dbRef?.db) return null;
     return collection(dbRef.db, `rooms/${roomCode}/messages`);
   }, [dbRef, roomCode]);
 
@@ -87,7 +87,7 @@ export default function FirestoreChat({ roomCode, className = "" }: FirestoreCha
     setError("");
     try {
       if (!dbRef) return;
-      const uid = dbRef.auth.currentUser!.uid;
+      const uid = dbRef.auth!.currentUser!.uid;
       const trimmed = text.trim();
       if (trimmed.length < 1 || trimmed.length > 200) {
         setError("內容需為 1~200 字");

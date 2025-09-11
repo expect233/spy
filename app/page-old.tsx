@@ -2,6 +2,17 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { apiClient } from '@/lib/api-client';
+import { createPlayerSession } from '@/lib/auth';
 
 export default function HomePage() {
   const [playerName, setPlayerName] = useState('');

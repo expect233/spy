@@ -24,11 +24,12 @@ export default function RoomClient() {
       { id: '2', name: '玩家2', isHost: false },
       { id: '3', name: '玩家3', isHost: false }
     ],
-    rounds: []
+    rounds: [] as Array<{ eliminatedId?: string }>
   };
 
   const mockCurrentPlayer = { id: '1', name: '玩家1', isHost: true };
-  const mockAssignment = null; // 遊戲未開始
+  const getMockAssignment = (): { role: 'undercover' | 'civilian'; word: string } | null => null;
+  const mockAssignment = getMockAssignment(); // 遊戲未開始
 
   useEffect(() => {
     // 靜態版本不需要載入數據

@@ -283,7 +283,7 @@ export function HostPanel({
                       </div>
                       <Slider
                         value={[undercoverCount]}
-                        onValueChange={([value]) => setUndercoverCount(value)}
+                        onValueChange={([value]: number[]) => setUndercoverCount(value)}
                         max={Math.min(3, Math.floor(room.players.length / 2))}
                         min={1}
                         step={1}
@@ -298,7 +298,7 @@ export function HostPanel({
                       </div>
                       <Slider
                         value={[blankCount]}
-                        onValueChange={([value]) => setBlankCount(value)}
+                        onValueChange={([value]: number[]) => setBlankCount(value)}
                         max={2}
                         min={0}
                         step={1}

@@ -232,7 +232,7 @@ test.describe('Game Flow E2E', () => {
         [player1Page, 'Here is what I think'],
         [player2Page, 'My opinion about this'],
         [player3Page, 'What I believe it is'],
-      ]) {
+      ] as const) {
         await page.fill('[data-testid="speak-input"]', text);
         await page.click('[data-testid="speak-submit-btn"]');
       }

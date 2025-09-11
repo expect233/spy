@@ -10,11 +10,12 @@ import {
 import type { Player, Vote, Assignment } from '@/types/game';
 
 describe('Game Logic', () => {
+  const now = Date.now();
   const mockPlayers: Player[] = [
-    { id: '1', name: 'Alice', isHost: true, connected: true, createdAt: Date.now() },
-    { id: '2', name: 'Bob', isHost: false, connected: true, createdAt: Date.now() },
-    { id: '3', name: 'Charlie', isHost: false, connected: true, createdAt: Date.now() },
-    { id: '4', name: 'David', isHost: false, connected: true, createdAt: Date.now() },
+    { id: '1', name: 'Alice', isHost: true, connected: true, createdAt: now, joinedAt: now, isReady: true },
+    { id: '2', name: 'Bob', isHost: false, connected: true, createdAt: now, joinedAt: now, isReady: true },
+    { id: '3', name: 'Charlie', isHost: false, connected: true, createdAt: now, joinedAt: now, isReady: true },
+    { id: '4', name: 'David', isHost: false, connected: true, createdAt: now, joinedAt: now, isReady: true },
   ];
 
   describe('assignRoles', () => {

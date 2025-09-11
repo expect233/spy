@@ -1,5 +1,5 @@
 // 客戶端存儲實現，使用 localStorage 和 WebSocket 模擬
-import { Room, Player, Assignment, Vote } from '../types/game';
+import { Room, Player, Assignment, Vote, Round, RoomConfig } from '../types/game';
 import { nanoid } from 'nanoid';
 
 export class ClientStore {
@@ -18,25 +18,38 @@ export class ClientStore {
   async createRoom(hostName: string): Promise<{ code: string; room: Room }> {
     const code = nanoid(6).toUpperCase();
     const hostId = nanoid();
-    
+
+    const player: Player = {
+      id: hostId,
+      name: hostName,
+      isHost: true,
+      isReady: false,
+      connected: true,
+      joinedAt: Date.now(),
+      createdAt: Date.now(),
+    };
+
+    const config: RoomConfig = {
+      undercoverCount: 1,
+      blankCount: 0,
+      maxPlayers: 8,
+      lang: 'zh-TW',
+      timers: { lobby: 30, speak: 60, vote: 60 },
+      isPrivate: false,
+      allowSpectators: false,
+    };
+
     const room: Room = {
       code,
       hostId,
-      players: [{
-        id: hostId,
-        name: hostName,
-        isHost: true,
-        isReady: false
-      }],
-      state: 'waiting',
-      settings: {
-        maxPlayers: 8,
-        timeLimit: 300,
-        topics: ['動物', '食物', '電影']
-      },
-      assignments: [],
+      players: [player],
+      spectators: [],
+      config,
+      state: 'lobby',
       rounds: [],
-      createdAt: Date.now()
+      currentRound: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
 
     this.rooms.set(code, room);
@@ -51,11 +64,11 @@ export class ClientStore {
       throw new Error('房間不存在');
     }
 
-    if (room.state !== 'waiting') {
+    if (room.state !== 'lobby') {
       throw new Error('遊戲已開始');
     }
 
-    if (room.players.length >= room.settings.maxPlayers) {
+    if (room.players.length >= room.config.maxPlayers) {
       throw new Error('房間已滿');
     }
 
@@ -64,10 +77,14 @@ export class ClientStore {
       id: playerId,
       name: playerName,
       isHost: false,
-      isReady: false
+      isReady: false,
+      connected: true,
+      joinedAt: Date.now(),
+      createdAt: Date.now(),
     };
 
     room.players.push(player);
+    room.updatedAt = Date.now();
     this.rooms.set(code, room);
     this.saveToStorage();
     this.notifyListeners(code, room);
@@ -124,14 +141,18 @@ export class ClientStore {
     });
 
     // 更新房間狀態
+    const firstRound: Round = {
+      index: 0,
+      speaks: [],
+      votes: [],
+      startTime: Date.now(),
+    };
+
     await this.updateRoom(code, {
-      state: 'playing',
+      state: 'speaking',
       assignments,
-      rounds: [{
-        roundNumber: 1,
-        votes: [],
-        eliminatedPlayerId: null
-      }]
+      rounds: [firstRound],
+      currentRound: 0,
     });
 
     return assignments;
@@ -144,7 +165,7 @@ export class ClientStore {
       throw new Error('房間不存在');
     }
 
-    const currentRound = room.rounds[room.rounds.length - 1];
+    const currentRound = room.rounds[room.currentRound];
     if (!currentRound) {
       throw new Error('沒有進行中的回合');
     }
@@ -155,8 +176,9 @@ export class ClientStore {
     // 添加新投票
     currentRound.votes.push({
       voterId,
+      round: room.currentRound,
       targetId,
-      timestamp: Date.now()
+      at: Date.now(),
     });
 
     this.rooms.set(code, room);
