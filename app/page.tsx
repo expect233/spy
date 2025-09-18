@@ -1,170 +1,162 @@
-'use client';
+'use client'
+import { useEffect, useMemo, useState } from 'react'
 
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
-import { usePlayer } from '@/app/lib/player';
+type Severity = 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown'
 
-export default function HomePage() {
-  const [playerName, setPlayerName] = useState('');
-  const [roomCode, setRoomCode] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [pending, start] = useTransition();
-  const [error, setError] = useState('');
-  const router = useRouter();
-  const { setName } = usePlayer?.() ?? { setName: () => {} } as any;
+type AlertItem = {
+  id: string
+  headline: string
+  severity: Severity
+  sent?: string
+  effective?: string
+  expires?: string
+  areaDesc?: string
+  link?: string
+  source?: string
+  category?: string
+  county?: string
+}
 
-  const createRoom = async () => {
-    if (!playerName.trim()) {
-      setError('請輸入玩家名稱');
-      return;
-    }
+const TW_TZ = 'Asia/Taipei'
 
-    setIsLoading(true);
-    setError('');
+function fmtTime(iso?: string) {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleString('zh-TW', {
+      timeZone: TW_TZ,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    })
+  } catch { return iso }
+}
 
+function sevCls(sev: Severity) {
+  switch (sev) {
+    case 'Extreme': return 'bg-red-600 text-white'
+    case 'Severe': return 'bg-orange-600 text-white'
+    case 'Moderate': return 'bg-yellow-500 text-black'
+    case 'Minor': return 'bg-emerald-500 text-black'
+    default: return 'bg-slate-400 text-black'
+  }
+}
+
+export default function Page() {
+  const [county, setCounty] = useState('屏東縣')
+  const [sev, setSev] = useState<Severity | 'ALL'>('ALL')
+  const [alerts, setAlerts] = useState<AlertItem[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function load() {
     try {
-      // 免費方案：直接導向示範房間
-      const predefinedCodes = ['DEMO01','DEMO02','DEMO03','TEST01','TEST02'];
-      const code = predefinedCodes[Math.floor(Math.random()*predefinedCodes.length)];
-      try { setName?.(playerName.trim()); } catch {}
-      router.push(`/room/${code}`);
-    } catch (error) {
-      console.error('創建房間失敗:', error);
-      setError('這是靜態演示版本');
-    } finally {
-      setIsLoading(false);
+      setError(null)
+      const qs = new URLSearchParams({ county, minSeverity: sev === 'ALL' ? 'Unknown' : sev })
+      const res = await fetch(`/api/alerts?${qs}`, { cache: 'no-store' })
+      if (!res.ok) throw new Error(`http ${res.status}`)
+      const data = (await res.json()) as AlertItem[]
+      setAlerts(data)
+    } catch (e: any) {
+      setError('無法連線資料源（已使用快取或範例）')
     }
-  };
+  }
 
-  const joinRoom = async () => {
-    if (!playerName.trim()) {
-      setError('請輸入玩家名稱');
-      return;
-    }
+  useEffect(() => { load() }, [county, sev])
+  useEffect(() => { const id = setInterval(load, 60_000); return () => clearInterval(id) }, [county, sev])
 
-    if (!roomCode.trim()) {
-      setError('請輸入房間代碼');
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const targetCode = roomCode.trim().toUpperCase();
-      try { setName?.(playerName.trim()); } catch {}
-      router.push(`/room/${targetCode}`);
-    } catch (error) {
-      console.error('加入房間失敗:', error);
-      setError('這是靜態演示版本');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const filtered = useMemo(() => alerts ?? [], [alerts])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">誰是臥底</h1>
-          <p className="text-gray-600">和朋友一起玩經典推理遊戲</p>
-          <p className="text-sm text-orange-600 mt-2">⚠️ 這是靜態演示版本</p>
+    <div>
+      <header className="sticky top-0 z-10 backdrop-blur bg-white/80 border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">屏東示警儀表板</h1>
+          <div className="text-xs text-slate-500">資料每分鐘更新；時間以台灣時間</div>
         </div>
+      </header>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2">開始遊戲</h2>
-            <p className="text-gray-600 text-sm mb-4">輸入你的名稱來創建或加入房間</p>
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        <section className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="p-4 rounded-2xl bg-white shadow-sm border border-slate-200">
+            <label className="block text-xs text-slate-500 mb-1">縣市</label>
+            <select className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white" value={county} onChange={(e) => setCounty(e.target.value)}>
+              {['屏東縣','高雄市','台東縣','花蓮縣','台南市','台中市','新北市','台北市','宜蘭縣','嘉義縣','嘉義市','桃園市','新竹縣','新竹市','苗栗縣','彰化縣','南投縣','雲林縣','基隆市','澎湖縣','金門縣','連江縣'].map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-              {error}
+          <div className="p-4 rounded-2xl bg-white shadow-sm border border-slate-200">
+            <label className="block text-xs text-slate-500 mb-1">嚴重度</label>
+            <select className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white" value={sev} onChange={(e) => setSev(e.target.value as any)}>
+              <option value="ALL">全部</option>
+              <option value="Extreme">Extreme</option>
+              <option value="Severe">Severe</option>
+              <option value="Moderate">Moderate</option>
+              <option value="Minor">Minor</option>
+              <option value="Unknown">Unknown</option>
+            </select>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs text-slate-500">資料來源</div>
+              <div className="text-sm font-medium">NCDR ATOM / CAP</div>
+            </div>
+            {error ? (
+              <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800">{error}</span>
+            ) : (
+              <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-800">連線正常</span>
+            )}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          {filtered.length === 0 && (
+            <div className="p-6 rounded-2xl border border-dashed border-slate-300 text-slate-500 text-sm">
+              目前沒有符合條件的生效中示警。
             </div>
           )}
 
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="playerName" className="block text-sm font-medium text-gray-700 mb-1">
-                玩家名稱
-              </label>
-              <input
-                id="playerName"
-                type="text"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                placeholder="輸入你的名稱"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={isLoading}
-              />
-            </div>
+          {filtered.map(a => (
+            <article key={a.id} className="group p-4 md:p-5 rounded-2xl bg-white shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-base md:text-lg font-semibold leading-snug">{a.headline}</h2>
+                <span className={`text-xs px-2 py-1 rounded-full ${sevCls(a.severity)}`}>{a.severity}</span>
+              </div>
 
-            <div className="space-y-3">
-              <button
-                onClick={createRoom}
-                disabled={isLoading}
-                className={`w-full py-3 px-4 rounded-md font-medium ${
-                  isLoading
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-500 text-white hover:bg-blue-600'
-                }`}
-              >
-                {isLoading ? '創建中...' : '創建房間'}
-              </button>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300" />
+              <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                <div className="flex flex-wrap gap-2">
+                  {a.category && (<span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700">{a.category}</span>)}
+                  {a.county && (<span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700">{a.county}</span>)}
+                  {a.source && (<span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700">{a.source}</span>)}
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">或</span>
+                <div className="text-right text-xs text-slate-500">
+                  發布：{fmtTime(a.sent)}
+                  {a.expires ? (<><span className="mx-1">·</span>有效至：{fmtTime(a.expires)}</>) : null}
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="roomCode" className="block text-sm font-medium text-gray-700 mb-1">
-                  房間代碼
-                </label>
-                <input
-                  id="roomCode"
-                  type="text"
-                  value={roomCode}
-                  onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                  placeholder="輸入6位房間代碼"
-                  maxLength={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={isLoading}
-                />
+              {a.areaDesc && (<p className="mt-2 text-sm text-slate-700">受影響區域：{a.areaDesc}</p>)}
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {a.link && (
+                  <a href={a.link} className="text-sm px-3 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800" target="_blank" rel="noreferrer">查看來源</a>
+                )}
+                <a
+                  href={`https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(a.link || location.href)}`}
+                  target="_blank" rel="noreferrer"
+                  className="text-sm px-3 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-500"
+                >
+                  分享到 LINE
+                </a>
               </div>
+            </article>
+          ))}
+        </section>
 
-              <button
-                onClick={joinRoom}
-                disabled={isLoading}
-                className={`w-full py-3 px-4 rounded-md font-medium ${
-                  isLoading
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-green-500 text-white hover:bg-green-600'
-                }`}
-              >
-                {isLoading ? '加入中...' : '加入房間'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 text-center">
-          <div className="bg-white rounded-lg shadow-md p-4">
-            <h3 className="text-lg font-semibold mb-2">遊戲規則</h3>
-            <ul className="text-sm text-gray-600 space-y-1 text-left">
-              <li>• 每位玩家會獲得一個詞語</li>
-              <li>• 其中一人是臥底，詞語與其他人不同</li>
-              <li>• 輪流描述自己的詞語（不能直說）</li>
-              <li>• 投票淘汰可疑的臥底</li>
-              <li>• 臥底存活到最後即獲勝</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+        <footer className="mt-10 text-xs text-slate-500 text-center">
+          資料來源：民生示警公開資料平台（生效中的示警 → CAP）。伺服器端已設 60 秒快取。
+        </footer>
+      </main>
     </div>
-  );
+  )
 }

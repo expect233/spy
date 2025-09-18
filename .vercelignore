@@ -1,0 +1,4 @@
+# 讓 Vercel 上傳更精簡（可選）
+.DS_Store
+node_modules
+.next/cache
