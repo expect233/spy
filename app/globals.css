@@ -2,4 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
+<<<<<<< HEAD
 html, body { height: 100%; }
+=======
+:root {
+  --bg: #f8fafc;   /* slate-50 */
+  --fg: #0f172a;   /* slate-900 */
+  --muted: #475569; /* slate-600 */
+  --card: #ffffff;
+  --ring: #2563eb; /* blue-600 */
+}
+html, body { color: var(--fg); background: var(--bg); }
+p, li { line-height: 1.7; }
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220; /* slate-950 */
+    --fg: #e2e8f0; /* slate-200 */
+    --muted: #94a3b8; /* slate-400 */
+    --card: #0f172a; /* slate-900 */
+    --ring: #3b82f6; /* blue-500 */
+  }
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Inter, 'Noto Sans TC', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.7;
+}
+
+a, button, input, textarea {
+  outline: none;
+}
+
+:focus-visible {
+  box-shadow: 0 0 0 3px var(--ring);
+}
+>>>>>>> de95443501ec69b283a4b1cc11f21b9a8f5d2ef6
