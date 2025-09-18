@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -64,14 +63,8 @@ export default function Page() {
   useEffect(() => { const id = setInterval(load, 60_000); return () => clearInterval(id) }, [county, sev])
 
   const filtered = useMemo(() => alerts ?? [], [alerts])
-=======
-// app/page.tsx
-import CreateOrJoinCard from './components/CreateOrJoinCard';
->>>>>>> de95443501ec69b283a4b1cc11f21b9a8f5d2ef6
 
-export default function Home() {
   return (
-<<<<<<< HEAD
     <div>
       <header className="sticky top-0 z-10 backdrop-blur bg-white/80 border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -167,13 +160,3 @@ export default function Home() {
     </div>
   )
 }
-=======
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 p-6">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <h1 className="text-3xl font-semibold text-slate-800">誰是臥底</h1>
-        <CreateOrJoinCard />
-      </div>
-    </main>
-  );
-}
->>>>>>> de95443501ec69b283a4b1cc11f21b9a8f5d2ef6
